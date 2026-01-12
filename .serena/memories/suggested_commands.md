@@ -8,6 +8,8 @@
 - Build App: `npm run tauri build`
 
 ## Verification
-- Frontend Code Quality Gates: `npm run format && npm run lint && npm run typecheck`
+- Frontend Check (Biome): `npm run check` (Format + Lint)
+- Frontend Type Check (TSC): `npm run typecheck`
+- Frontend Tests (Vitest): `npm run test`
 - Backend Check: `cd src-tauri; cargo check`
 - Backend Test: `cd src-tauri; cargo test`

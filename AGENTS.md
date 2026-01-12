@@ -21,8 +21,11 @@ This repository contains a **Tauri v2** application using **React**, **TypeScrip
 ## 🧪 Testing & Verification
 
 ### Frontend (React/TS)
-It checks format, lint, and vitest scripts
-- **Run Tests**: `npm run test`
+- **Validation**: `npm run check` (Runs Biome check: formatting + linting)
+- **Type Check**: `npm run typecheck` (Runs `tsc --noEmit`)
+- **Unit Tests**: `npm run test` (Runs Vitest)
+  - Run single test: `npm run test -- -t "test name"`
+  - UI Mode: `npm run test -- --ui`
 
 ### Backend (Rust)
 - **Run Tests**: `cd src-tauri && cargo test`
