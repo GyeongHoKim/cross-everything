@@ -1,50 +1,137 @@
-import { invoke } from "@tauri-apps/api/core";
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
+import { useEffect, useRef, useState } from "react";
+import FileList from "./components/FileList";
+import SearchInput from "./components/SearchInput";
+import Settings from "./components/Settings";
+import { useFileSearch } from "./hooks/useFileSearch";
+import { useIndex } from "./hooks/useIndex";
 import "./App.css";
+import { homeDir } from "@tauri-apps/api/path";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const { search, results, loading, error } = useFileSearch();
+  const {
+    buildIndex,
+    isReady,
+    isIndexing,
+    getIndexStatus,
+    totalFiles,
+    lastUpdated,
+    indexProgress,
+  } = useIndex();
+  const [indexInitialized, setIndexInitialized] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  // Auto-focus search input on mount (Everything style)
+  useEffect(() => {
+    searchInputRef.current?.focus();
+  }, []);
+
+  // Auto-build index on app startup (runs in background)
+  useEffect(() => {
+    const initializeIndex = async () => {
+      if (indexInitialized) return;
+
+      const status = await getIndexStatus();
+
+      // If index is not ready and not currently indexing, start indexing
+      if (!status.is_ready && !status.indexing_in_progress) {
+        setIndexInitialized(true);
+        try {
+          // Get home directory
+          const home = await homeDir();
+          // Default paths to index (macOS/Linux)
+          // Index home directory for user files
+          const defaultPaths = [home];
+
+          // Start indexing in background (non-blocking)
+          buildIndex(defaultPaths, false).catch((err) => {
+            console.error("Failed to initialize index:", err);
+          });
+        } catch (err) {
+          console.error("Failed to get home directory:", err);
+        }
+      } else if (status.is_ready) {
+        setIndexInitialized(true);
+      } else if (status.indexing_in_progress) {
+        // Indexing already in progress, just mark as initialized
+        setIndexInitialized(true);
+      }
+    };
+
+    // Small delay to ensure app is fully loaded
+    const timer = setTimeout(() => {
+      initializeIndex();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [getIndexStatus, buildIndex, indexInitialized]);
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank" rel="noopener">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank" rel="noopener">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank" rel="noopener">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
+    <div className="everything-app">
+      {error && <div className="error-message">{error}</div>}
+      {isIndexing && (
+        <div className="indexing-message">
+          <div>Indexing files... (This may take a while on first launch)</div>
+          {indexProgress && (
+            <div className="indexing-progress">
+              <div className="progress-bar">
+                <div className="progress-fill" style={{ width: `${indexProgress.percentage}%` }} />
+              </div>
+              <div className="progress-text">
+                {indexProgress.processed.toLocaleString()} / {indexProgress.total.toLocaleString()}{" "}
+                files ({indexProgress.percentage}%)
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {!isReady && !isIndexing && (
+        <div className="error-message">Index not ready. Building index...</div>
+      )}
+      <SearchInput
+        ref={searchInputRef}
+        onSearch={search}
+        loading={loading || isIndexing}
+        error={error}
+        indexStatus={
+          isReady || isIndexing
+            ? {
+                is_ready: isReady,
+                total_files: totalFiles,
+                last_updated: lastUpdated,
+                indexing_in_progress: isIndexing,
+              }
+            : null
+        }
+      />
+      <FileList results={results} loading={loading || isIndexing} />
+      <button
+        type="button"
+        className="settings-button"
+        onClick={() => setShowSettings(true)}
+        aria-label="Open settings"
+        title="Settings"
       >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+        ⚙️
+      </button>
+      {showSettings && (
+        <>
+          <button
+            type="button"
+            className="settings-overlay"
+            onClick={() => setShowSettings(false)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setShowSettings(false);
+              }
+            }}
+            aria-label="Close settings"
+          />
+          <Settings onClose={() => setShowSettings(false)} />
+        </>
+      )}
+    </div>
   );
 }
 
