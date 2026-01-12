@@ -31,7 +31,10 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] Code Quality Assurance: Confirm automated quality gates (format, lint, typecheck) are configured and will run post-modification
+- [ ] Comprehensive Testing Standards: Verify testing strategy includes unit, integration, and E2E tests with >80% coverage for critical paths
+- [ ] User Experience Excellence: Ensure UX requirements drive technical decisions, with accessibility and performance goals defined
+- [ ] UI Style Consistency: Confirm design system tokens and patterns are established for consistent visual language
 
 ## Project Structure
 

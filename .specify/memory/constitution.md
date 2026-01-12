@@ -1,50 +1,38 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+Version change: N/A → 1.0.0
+List of modified principles: N/A (new constitution)
+Added sections: Technical Standards, Development Workflow
+Removed sections: N/A
+Templates requiring updates: ⚠ pending - plan-template.md Constitution Check section
+Follow-up TODOs: N/A
+-->
+# CrossEverything Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Code Quality Assurance
+All code modifications MUST pass automated quality gates: formatting (`npm run format`), linting (`npm run lint`), and type checking (`npm run typecheck`). Agents are required to execute these gates immediately after any code changes to prevent regressions and maintain consistent code standards.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Comprehensive Testing Standards
+Every feature implementation MUST include appropriate testing: unit tests for components/logic, integration tests for API interactions, and end-to-end tests for user workflows. Test coverage MUST exceed 80% for critical paths, with automated test execution in CI/CD pipelines.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. User Experience Excellence
+All user-facing features MUST prioritize intuitive design and responsive performance. User experience decisions SHOULD guide technical implementations, with usability testing required for major features to ensure accessibility and efficiency.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. UI Style Consistency
+The application MUST maintain consistent visual design language across all interfaces. UI components SHOULD follow established design tokens and patterns, with design system documentation updated alongside code changes.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+## Technical Standards
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Technology stack includes React/TypeScript frontend with Tauri Rust backend. Code formatting uses Biome, testing with Vitest, and Git hooks enforce pre-commit quality checks. All contributions MUST use the established tooling and follow the documented patterns in AGENTS.md.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+## Development Workflow
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
-
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+Agents MUST execute code quality gates after modifications. Pull requests REQUIRE successful CI checks including all test suites and linting. Code reviews MUST verify principle compliance, with automated checks preventing merges of non-compliant code.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+These principles supersede all other practices and MUST guide all technical decisions. Implementation choices SHOULD be justified by reference to relevant principles, with complexity requiring explicit rationale. Agents are accountable for maintaining code quality through automated gates and proactive compliance checks. Amendments require consensus approval and updated documentation.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-01-12 | **Last Amended**: 2026-01-12
