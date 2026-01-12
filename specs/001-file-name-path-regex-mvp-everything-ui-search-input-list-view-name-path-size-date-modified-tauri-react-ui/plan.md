@@ -1,0 +1,191 @@
+# Implementation Plan: File and Folder Search
+
+**Branch**: 001-file-name-path-regex-mvp-everything-ui-search-input-list-view-name-path-size-date-modified-tauri-react-ui | **Date**: 2026-01-12 | **Spec**: C:\workspace\everything\specs\001-file-name-path-regex-mvp-everything-ui-search-input-list-view-name-path-size-date-modified-tauri-react-ui\spec.md
+
+**Input**: Feature specification from /specs/001-file-name-path-regex-mvp-everything-ui-search-input-list-view-name-path-size-date-modified-tauri-react-ui/spec.md
+
+**Note**: This template is filled in by the /speckit.plan command. See `.specify/templates/commands/plan.md` for the execution workflow.
+
+## Summary
+
+Implement file and folder search functionality with regex support using Tauri backend for file system operations and React UI for user interface. Achieve fast performance through file system indexing using Rust libraries tantivy for search, sled for storage, and notify for real-time updates, inspired by Everything's approach.
+
+## Technical Context
+
+**Language/Version**: Rust (backend), TypeScript/React (frontend)  
+
+**Primary Dependencies**: Tauri, React, Vite, tantivy, sled, notify, walkdir  
+
+**Storage**: sled (embedded file-based database) for index storage  
+
+**Testing**: cargo test (backend), Vitest (frontend)  
+
+**Target Platform**: macOS, Linux  
+
+**Project Type**: Desktop application (Tauri)  
+
+**Performance Goals**: Search results returned in under 2 seconds  
+
+**Constraints**: Support regular expressions, display name, path, size, date modified  
+
+**Scale/Scope**: System-wide file search, limit to 1000 results  
+
+## Constitution Check
+
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+- [x] Code Quality Assurance: Automated quality gates (format, lint, typecheck) are configured and will run post-modification
+
+- [x] Comprehensive Testing Standards: Testing strategy includes unit tests with Vitest and cargo test, targeting >80% coverage for critical paths
+
+- [x] User Experience Excellence: UX prioritizes fast search performance and intuitive UI, with accessibility considerations
+
+- [x] UI Style Consistency: React components will follow established patterns for consistent visual language
+
+## Project Structure
+
+### Documentation (this feature)
+
+```text
+specs/001-file-name-path-regex-mvp-everything-ui-search-input-list-view-name-path-size-date-modified-tauri-react-ui/
+├── plan.md              # This file (/speckit.plan command output)
+├── research.md          # Phase 0 output (/speckit.plan command)
+├── data-model.md        # Phase 1 output (/speckit.plan command)
+├── quickstart.md        # Phase 1 output (/speckit.plan command)
+├── contracts/           # Phase 1 output (/speckit.plan command)
+└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+```
+
+### Source Code (repository root)
+
+```text
+src-tauri/
+├── src/
+│   ├── main.rs
+│   ├── lib.rs
+│   ├── search.rs       # Search logic with tantivy
+│   ├── index.rs        # Indexing with sled
+│   └── watcher.rs      # File watching with notify
+└── Cargo.toml
+
+src/
+├── components/
+│   ├── SearchInput.tsx
+│   └── FileList.tsx
+├── hooks/
+│   └── useFileSearch.ts
+└── App.tsx
+
+tests/
+├── unit/
+├── integration/
+└── e2e/
+```
+
+**Structure Decision**: Tauri project structure with backend in src-tauri/src and frontend in src, following the established patterns.
+
+## Complexity Tracking
+
+None - all constitution principles are satisfied.
+**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
+
+## Summary
+
+[Extract from feature spec: primary requirement + technical approach from research]
+
+## Technical Context
+
+<!--
+  ACTION REQUIRED: Replace the content in this section with the technical details
+  for the project. The structure here is presented in advisory capacity to guide
+  the iteration process.
+-->
+
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [single/web/mobile - determines source structure]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+
+## Constitution Check
+
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+- [ ] Code Quality Assurance: Confirm automated quality gates (format, lint, typecheck) are configured and will run post-modification
+- [ ] Comprehensive Testing Standards: Verify testing strategy includes unit, integration, and E2E tests with >80% coverage for critical paths
+- [ ] User Experience Excellence: Ensure UX requirements drive technical decisions, with accessibility and performance goals defined
+- [ ] UI Style Consistency: Confirm design system tokens and patterns are established for consistent visual language
+
+## Project Structure
+
+### Documentation (this feature)
+
+```text
+specs/[###-feature]/
+├── plan.md              # This file (/speckit.plan command output)
+├── research.md          # Phase 0 output (/speckit.plan command)
+├── data-model.md        # Phase 1 output (/speckit.plan command)
+├── quickstart.md        # Phase 1 output (/speckit.plan command)
+├── contracts/           # Phase 1 output (/speckit.plan command)
+└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+```
+
+### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
+
+```text
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
+src/
+├── models/
+├── services/
+├── cli/
+└── lib/
+
+tests/
+├── contract/
+├── integration/
+└── unit/
+
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
+
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
+
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
+```
+
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
+
+## Complexity Tracking
+
+> **Fill ONLY if Constitution Check has violations that must be justified**
+
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
