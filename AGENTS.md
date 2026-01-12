@@ -28,8 +28,10 @@ This repository contains a **Tauri v2** application using **React**, **TypeScrip
   - UI Mode: `npm run test -- --ui`
 
 ### Backend (Rust)
-- **Run Tests**: `cd src-tauri && cargo test`
-- **Check**: `cd src-tauri && cargo check`
+- **Format**: `npm run format:core` (Runs `cargo fmt`)
+- **Lint**: `npm run lint:core` (Runs `cargo clippy`)
+- **Run Tests**: `npm run test:core` (Runs `cargo test`)
+
 
 ## 🎨 Code Style Guidelines
 
@@ -69,7 +71,7 @@ This repository contains a **Tauri v2** application using **React**, **TypeScrip
 
 ## 🤖 Agent Behavior Rules
 
-1. **Verify Types**: ALWAYS run `npm run format && npm run lint && npm run typecheck` after making changes to TypeScript files. Do not assume validity.
+1. **Verify Code Quality**: ALWAYS run `npm run check && npm run typecheck` after making changes to TypeScript files. Also run `npm run format:core && npm run lint:core` for Rust changes.
 2. **Dependency Management**:
    - Frontend: `npm install <package>`
    - Backend: Add to `src-tauri/Cargo.toml`
