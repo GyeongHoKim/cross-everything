@@ -29,6 +29,9 @@ export default function FileList({ results, loading = false }: FileListProps) {
   const formatDate = (dateStr: string): string => {
     try {
       const date = new Date(dateStr);
+      if (Number.isNaN(date.getTime())) {
+        return dateStr;
+      }
       return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
     } catch {
       return dateStr;

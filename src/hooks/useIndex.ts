@@ -35,7 +35,7 @@ export function useIndex(): UseIndexReturn {
 
   const getIndexStatus = useCallback(async () => {
     try {
-      const status = (await invoke("get_index_status")) as GetIndexStatusOutput;
+      const status = await invoke<GetIndexStatusOutput>("get_index_status");
       setIsReady(status.is_ready);
       setIsIndexing(status.indexing_in_progress);
       setTotalFiles(status.total_files);
@@ -57,10 +57,10 @@ export function useIndex(): UseIndexReturn {
       setIsIndexing(true);
       setIndexProgress(null); // Reset progress
       try {
-        const result = (await invoke("build_index", {
+        const result = await invoke<BuildIndexOutput>("build_index", {
           paths,
           forceRebuild,
-        })) as BuildIndexOutput;
+        });
 
         if (result.status === "completed") {
           await getIndexStatus();

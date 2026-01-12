@@ -18,11 +18,11 @@ export function useFileSearch(): UseFileSearchReturn {
     setLoading(true);
     setError(null);
     try {
-      const response = (await invoke("search_files", {
+      const response = await invoke<SearchFilesOutput>("search_files", {
         query: input.query,
         useRegex: input.use_regex,
         limit: input.limit ?? 1000,
-      })) as SearchFilesOutput;
+      });
 
       setResults(response.results);
     } catch (err) {

@@ -4,12 +4,13 @@ mod index;
 mod search;
 mod watcher;
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tantivy::schema::Value;
-use tauri::{Emitter, Manager};
 use tauri::menu::{Menu, MenuItem};
+use tauri::{Emitter, Manager};
 
 /// Initialize logging to file with rotation
 fn init_logging(log_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -17,7 +18,11 @@ fn init_logging(log_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     std::fs::create_dir_all(log_dir)?;
 
     flexi_logger::Logger::try_with_env_or_str("info")?
-        .log_to_file(flexi_logger::FileSpec::default().directory(log_dir).basename("crosseverything"))
+        .log_to_file(
+            flexi_logger::FileSpec::default()
+                .directory(log_dir)
+                .basename("crosseverything"),
+        )
         .rotate(
             flexi_logger::Criterion::Size(10_000_000), // 10MB per file
             flexi_logger::Naming::Timestamps,
@@ -30,29 +35,9 @@ fn init_logging(log_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn format_timestamp_iso8601(timestamp: i64) -> String {
-    use std::time::{Duration, UNIX_EPOCH};
-    let dt = UNIX_EPOCH + Duration::from_secs(timestamp as u64);
-    let system_time = dt;
-
-    // Format as ISO 8601 (simplified, always UTC)
-    // This is a basic implementation - for production, consider using a proper date formatting library
-    let datetime = system_time.duration_since(UNIX_EPOCH).unwrap();
-    let secs = datetime.as_secs();
-    let nanos = datetime.subsec_nanos();
-
-    // Calculate date components
-    let _days = secs / 86400;
-    let seconds_in_day = secs % 86400;
-    let hours = seconds_in_day / 3600;
-    let minutes = (seconds_in_day % 3600) / 60;
-    let seconds = seconds_in_day % 60;
-
-    // Simple epoch to date conversion (approximate, for ISO 8601 formatting)
-    // For a proper implementation, we'd need a date library, but this works for display
-    format!(
-        "1970-01-01T{:02}:{:02}:{:02}.{:09}Z",
-        hours, minutes, seconds, nanos
-    )
+    let dt = DateTime::<Utc>::from_timestamp(timestamp, 0)
+        .unwrap_or_else(|| DateTime::<Utc>::from_timestamp(0, 0).unwrap());
+    dt.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -242,17 +227,15 @@ async fn build_index(
     log::debug!("DB path: {:?}", db_path);
     log::debug!("Search index path: {:?}", search_index_path);
 
-    let index_manager = index::IndexManager::new(&db_path)
-        .map_err(|e| {
-            log::error!("Failed to create index manager: {}", e);
-            format!("Failed to create index manager: {}", e)
-        })?;
+    let index_manager = index::IndexManager::new(&db_path).map_err(|e| {
+        log::error!("Failed to create index manager: {}", e);
+        format!("Failed to create index manager: {}", e)
+    })?;
 
-    let search_index = search::SearchIndex::new(&search_index_path)
-        .map_err(|e| {
-            log::error!("Failed to create search index: {}", e);
-            format!("Failed to create search index: {}", e)
-        })?;
+    let search_index = search::SearchIndex::new(&search_index_path).map_err(|e| {
+        log::error!("Failed to create search index: {}", e);
+        format!("Failed to create search index: {}", e)
+    })?;
 
     let schema = search_index.get_schema();
     let mut writer = search_index
@@ -301,14 +284,15 @@ async fn build_index(
             Err(e) => {
                 let error_details = if let Some(io_err) = e.downcast_ref::<std::io::Error>() {
                     let error_kind = format!("{:?}", io_err.kind());
-                    let error_code = io_err.raw_os_error()
+                    let error_code = io_err
+                        .raw_os_error()
                         .map(|code| format!("os error {}", code))
                         .unwrap_or_else(|| "no error code".to_string());
                     format!("{} ({}), {}", io_err, error_kind, error_code)
                 } else {
                     format!("{}", e)
                 };
-                
+
                 log::error!(
                     "Failed to traverse directory {}: {}",
                     path_str,
@@ -322,12 +306,10 @@ async fn build_index(
 
         for entity in entities {
             // Save to sled
-            index_manager
-                .save_file_entity(&entity)
-                .map_err(|e| {
-                    log::error!("Failed to save entity {}: {}", entity.path, e);
-                    format!("Failed to save entity: {}", e)
-                })?;
+            index_manager.save_file_entity(&entity).map_err(|e| {
+                log::error!("Failed to save entity {}: {}", entity.path, e);
+                format!("Failed to save entity: {}", e)
+            })?;
 
             // Add to tantivy index
             let mut doc = tantivy::TantivyDocument::default();
@@ -356,12 +338,14 @@ async fn build_index(
             );
             doc.add_bool(is_folder_field, entity.is_folder);
 
-            writer
-                .add_document(doc)
-                .map_err(|e| {
-                    log::error!("Failed to add document to search index for {}: {}", entity.path, e);
-                    format!("Failed to add document: {}", e)
-                })?;
+            writer.add_document(doc).map_err(|e| {
+                log::error!(
+                    "Failed to add document to search index for {}: {}",
+                    entity.path,
+                    e
+                );
+                format!("Failed to add document: {}", e)
+            })?;
 
             files_indexed += 1;
 
@@ -389,12 +373,10 @@ async fn build_index(
     }
 
     log::info!("Committing index...");
-    writer
-        .commit()
-        .map_err(|e| {
-            log::error!("Failed to commit index: {}", e);
-            format!("Failed to commit index: {}", e)
-        })?;
+    writer.commit().map_err(|e| {
+        log::error!("Failed to commit index: {}", e);
+        format!("Failed to commit index: {}", e)
+    })?;
 
     let total_time = index_start_time.elapsed();
     let rate = files_indexed as f64 / total_time.as_secs_f64();
@@ -451,15 +433,18 @@ async fn search_files(
     state: tauri::State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
     let start_time = std::time::Instant::now();
-    log::info!("Search request: query='{}', regex={}, limit={:?}", query, use_regex, limit);
+    log::info!(
+        "Search request: query='{}', regex={}, limit={:?}",
+        query,
+        use_regex,
+        limit
+    );
 
     let search_index_guard = state.search_index.lock().unwrap();
-    let search_index = search_index_guard
-        .as_ref()
-        .ok_or_else(|| {
-            log::warn!("Search attempted but index is not ready");
-            "INDEX_NOT_READY".to_string()
-        })?;
+    let search_index = search_index_guard.as_ref().ok_or_else(|| {
+        log::warn!("Search attempted but index is not ready");
+        "INDEX_NOT_READY".to_string()
+    })?;
 
     let limit = limit.unwrap_or(1000);
 
@@ -471,12 +456,10 @@ async fn search_files(
         })?;
     }
 
-    let docs = search_index
-        .search(&query, use_regex, limit)
-        .map_err(|e| {
-            log::error!("Search failed for query '{}': {}", query, e);
-            format!("Search failed: {}", e)
-        })?;
+    let docs = search_index.search(&query, use_regex, limit).map_err(|e| {
+        log::error!("Search failed for query '{}': {}", query, e);
+        format!("Search failed: {}", e)
+    })?;
 
     let schema = search_index.get_schema();
     let name_field = schema
@@ -576,7 +559,6 @@ async fn get_index_status(state: tauri::State<'_, AppState>) -> Result<serde_jso
     }))
 }
 
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -600,35 +582,33 @@ pub fn run() {
 
             // Create system tray icon
             let icon = app.default_window_icon().cloned();
-            
+
             let show_item = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            
+
             let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
-            
+
             let mut tray_builder = tauri::tray::TrayIconBuilder::new()
                 .tooltip("CrossEverything")
                 .menu(&menu);
-            
+
             // Set icon if available
             if let Some(icon_image) = icon {
                 tray_builder = tray_builder.icon(icon_image);
             }
-            
+
             let _tray = tray_builder
-                .on_menu_event(move |app, event| {
-                    match event.id.as_ref() {
-                        "show" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
+                .on_menu_event(move |app, event| match event.id.as_ref() {
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
                         }
-                        "quit" => {
-                            app.exit(0);
-                        }
-                        _ => {}
                     }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
                 })
                 .on_tray_icon_event(|tray, event| {
                     if let tauri::tray::TrayIconEvent::Click {
@@ -643,7 +623,7 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
-            
+
             Ok(())
         })
         .manage(AppState::default())
@@ -665,4 +645,343 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_greet_command() {
+        let result = greet("World");
+        assert_eq!(result, "Hello, World! You've been greeted from Rust!");
+    }
+
+    #[test]
+    fn test_greet_empty_name() {
+        let result = greet("");
+        assert_eq!(result, "Hello, ! You've been greeted from Rust!");
+    }
+
+    #[test]
+    fn test_greet_special_characters() {
+        let result = greet("Test-123_456");
+        assert_eq!(
+            result,
+            "Hello, Test-123_456! You've been greeted from Rust!"
+        );
+    }
+
+    #[test]
+    fn test_format_timestamp_iso8601_epoch() {
+        let result = format_timestamp_iso8601(0);
+        assert!(
+            result.starts_with("1970-01-01T00:00:00"),
+            "Should format epoch time correctly"
+        );
+        assert!(result.ends_with("Z"), "Should end with Z for UTC");
+    }
+
+    #[test]
+    fn test_format_timestamp_iso8601_recent() {
+        let result = format_timestamp_iso8601(1640000000);
+        assert!(result.contains("T"), "Should contain T separator");
+        assert!(result.ends_with("Z"), "Should end with Z for UTC");
+    }
+
+    #[test]
+    fn test_format_timestamp_iso8601_negative() {
+        let result = format_timestamp_iso8601(-86400);
+        assert!(
+            result.starts_with("1969-12-31"),
+            "Should handle negative timestamps"
+        );
+    }
+
+    #[test]
+    fn test_file_entity_serialization() {
+        let entity = FileEntity {
+            id: "test_id".to_string(),
+            name: "test.txt".to_string(),
+            path: "/path/to/test.txt".to_string(),
+            size: 1024,
+            modified: 1640000000,
+            is_folder: false,
+        };
+
+        let serialized = serde_json::to_string(&entity).unwrap();
+        assert!(serialized.contains("test.txt"), "Should serialize name");
+        assert!(
+            serialized.contains("/path/to/test.txt"),
+            "Should serialize path"
+        );
+        assert!(serialized.contains("1024"), "Should serialize size");
+    }
+
+    #[test]
+    fn test_file_entity_deserialization() {
+        let json = r#"{
+            "id": "test_id",
+            "name": "test.txt",
+            "path": "/path/to/test.txt",
+            "size": 1024,
+            "modified": 1640000000,
+            "is_folder": false
+        }"#;
+
+        let entity: FileEntity = serde_json::from_str(json).unwrap();
+
+        assert_eq!(entity.id, "test_id");
+        assert_eq!(entity.name, "test.txt");
+        assert_eq!(entity.path, "/path/to/test.txt");
+        assert_eq!(entity.size, 1024);
+        assert_eq!(entity.modified, 1640000000);
+        assert!(!entity.is_folder);
+    }
+
+    #[test]
+    fn test_file_entity_roundtrip() {
+        let original = FileEntity {
+            id: "test_id".to_string(),
+            name: "test.txt".to_string(),
+            path: "/path/to/test.txt".to_string(),
+            size: 2048,
+            modified: 1640005000,
+            is_folder: true,
+        };
+
+        let serialized = serde_json::to_string(&original).unwrap();
+        let deserialized: FileEntity = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.id, original.id);
+        assert_eq!(deserialized.name, original.name);
+        assert_eq!(deserialized.path, original.path);
+        assert_eq!(deserialized.size, original.size);
+        assert_eq!(deserialized.modified, original.modified);
+        assert_eq!(deserialized.is_folder, original.is_folder);
+    }
+
+    #[test]
+    fn test_file_entity_folder_detection() {
+        let file = FileEntity {
+            id: "file_id".to_string(),
+            name: "document.pdf".to_string(),
+            path: "/home/user/document.pdf".to_string(),
+            size: 51200,
+            modified: 1640000000,
+            is_folder: false,
+        };
+
+        let folder = FileEntity {
+            id: "folder_id".to_string(),
+            name: "documents".to_string(),
+            path: "/home/user/documents".to_string(),
+            size: 0,
+            modified: 1640000000,
+            is_folder: true,
+        };
+
+        assert!(!file.is_folder);
+        assert!(folder.is_folder);
+    }
+
+    #[test]
+    fn test_app_state_default() {
+        let state = AppState::default();
+
+        assert!(
+            state.index_manager.lock().unwrap().is_none(),
+            "Index manager should be None initially"
+        );
+        assert!(
+            state.search_index.lock().unwrap().is_none(),
+            "Search index should be None initially"
+        );
+        assert!(
+            state.file_watcher.lock().unwrap().is_none(),
+            "File watcher should be None initially"
+        );
+        assert_eq!(*state.is_indexing.lock().unwrap(), false);
+        assert_eq!(*state.total_files.lock().unwrap(), 0);
+        assert_eq!(*state.last_updated.lock().unwrap(), None);
+    }
+
+    #[test]
+    fn test_app_state_is_indexing_mutex() {
+        let state = AppState::default();
+
+        {
+            let mut is_indexing = state.is_indexing.lock().unwrap();
+            *is_indexing = true;
+        }
+
+        assert_eq!(*state.is_indexing.lock().unwrap(), true);
+
+        {
+            let mut is_indexing = state.is_indexing.lock().unwrap();
+            *is_indexing = false;
+        }
+
+        assert_eq!(*state.is_indexing.lock().unwrap(), false);
+    }
+
+    #[test]
+    fn test_app_state_total_files_mutex() {
+        let state = AppState::default();
+
+        {
+            let mut total_files = state.total_files.lock().unwrap();
+            *total_files = 100;
+        }
+
+        assert_eq!(*state.total_files.lock().unwrap(), 100);
+    }
+
+    #[test]
+    fn test_app_state_last_updated_mutex() {
+        let state = AppState::default();
+
+        {
+            let mut last_updated = state.last_updated.lock().unwrap();
+            *last_updated = Some(1640000000);
+        }
+
+        assert_eq!(*state.last_updated.lock().unwrap(), Some(1640000000));
+    }
+
+    #[test]
+    fn test_get_index_status_logic() {
+        let state = AppState::default();
+
+        let is_indexing = *state.is_indexing.lock().unwrap();
+        let total_files = *state.total_files.lock().unwrap();
+        let last_updated = *state.last_updated.lock().unwrap();
+        let is_ready = state.search_index.lock().unwrap().is_some();
+
+        assert_eq!(is_ready, false);
+        assert_eq!(total_files, 0);
+        assert_eq!(last_updated, None);
+        assert_eq!(is_indexing, false);
+    }
+
+    #[test]
+    fn test_get_index_status_with_mock_data() {
+        use tempfile::tempdir;
+
+        let state = AppState::default();
+
+        let temp_dir = tempdir().unwrap();
+        let db_path = temp_dir.path().join("test_db");
+        let search_index_path = temp_dir.path().join("test_index");
+
+        let index_manager = index::IndexManager::new(&db_path).unwrap();
+        let search_index = search::SearchIndex::new(&search_index_path).unwrap();
+
+        *state.index_manager.lock().unwrap() = Some(index_manager);
+        *state.search_index.lock().unwrap() = Some(search_index);
+        *state.total_files.lock().unwrap() = 42;
+        *state.last_updated.lock().unwrap() = Some(1640000000);
+
+        let is_indexing = *state.is_indexing.lock().unwrap();
+        let total_files = *state.total_files.lock().unwrap();
+        let last_updated = *state.last_updated.lock().unwrap();
+        let is_ready = state.search_index.lock().unwrap().is_some();
+
+        assert_eq!(is_ready, true);
+        assert_eq!(total_files, 42);
+        assert_ne!(last_updated, None);
+        assert_eq!(is_indexing, false);
+    }
+
+    #[test]
+    fn test_get_index_status_indexing() {
+        let state = AppState::default();
+
+        *state.is_indexing.lock().unwrap() = true;
+
+        let is_indexing = *state.is_indexing.lock().unwrap();
+        assert_eq!(is_indexing, true);
+    }
+
+    #[test]
+    fn test_search_index_not_ready() {
+        let state = AppState::default();
+        let search_index_guard = state.search_index.lock().unwrap();
+        let search_index = search_index_guard.as_ref();
+
+        assert!(
+            search_index.is_none(),
+            "Search index should be None initially"
+        );
+    }
+
+    #[test]
+    fn test_regex_validation() {
+        let valid_regex = r"^[a-zA-Z0-9]+$";
+        let invalid_regex = "[invalid(";
+
+        let valid_result = regex::Regex::new(valid_regex);
+        assert!(valid_result.is_ok(), "Valid regex should parse");
+
+        let invalid_result = regex::Regex::new(invalid_regex);
+        assert!(invalid_result.is_err(), "Invalid regex should fail");
+    }
+
+    #[test]
+    fn test_search_index_empty_query() {
+        use tempfile::tempdir;
+
+        let temp_dir = tempdir().unwrap();
+        let search_index_path = temp_dir.path().join("test_index");
+        let search_index = search::SearchIndex::new(&search_index_path).unwrap();
+
+        let results = search_index.search("", false, 10).unwrap();
+        assert_eq!(results.len(), 0, "Empty query should return no results");
+    }
+
+    #[test]
+    fn test_search_index_with_mock_data() {
+        use tempfile::tempdir;
+
+        let temp_dir = tempdir().unwrap();
+        let search_index_path = temp_dir.path().join("test_index");
+        let search_index = search::SearchIndex::new(&search_index_path).unwrap();
+
+        let schema = search_index.get_schema();
+        let name_field = schema.get_field("name").unwrap();
+        let path_field = schema.get_field("path").unwrap();
+        let size_field = schema.get_field("size").unwrap();
+        let modified_field = schema.get_field("modified").unwrap();
+        let is_folder_field = schema.get_field("is_folder").unwrap();
+
+        let mut writer = search_index.writer().unwrap();
+
+        let mut doc = tantivy::TantivyDocument::default();
+        doc.add_text(name_field, "test.txt");
+        doc.add_text(path_field, "/test.txt");
+        doc.add_u64(size_field, 100);
+        doc.add_date(modified_field, tantivy::DateTime::from_timestamp_secs(1000));
+        doc.add_bool(is_folder_field, false);
+        writer.add_document(doc).unwrap();
+
+        writer.commit().unwrap();
+
+        let results = search_index.search("test", false, 10).unwrap();
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn test_format_timestamp_with_chrono() {
+        let timestamp = 1640000000;
+
+        let formatted = format_timestamp_iso8601(timestamp);
+
+        assert!(formatted.contains("-"), "Should contain date separators");
+        assert!(formatted.contains("T"), "Should contain T time separator");
+        assert!(formatted.contains(":"), "Should contain time separators");
+        assert!(formatted.ends_with("Z"), "Should end with Z for UTC");
+
+        let parsed: DateTime<Utc> = formatted.parse().expect("Should be valid ISO 8601");
+        assert_eq!(parsed.timestamp(), timestamp);
+    }
 }
