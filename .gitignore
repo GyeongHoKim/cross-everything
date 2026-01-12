@@ -12,6 +12,19 @@ dist
 dist-ssr
 *.local
 
+# Rust
+target/
+debug/
+release/
+*.rs.bk
+*.rlib
+*.prof*
+Cargo.lock
+
+# Tauri application data
+src-tauri/.index_db/
+src-tauri/.search_index/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +35,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment
+.env*
