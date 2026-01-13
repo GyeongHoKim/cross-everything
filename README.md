@@ -17,25 +17,23 @@ While Windows users have the original tool, **CrossEverything** brings that same
 
 ## Installation
 
-CrossEverything is distributed through native package managers for seamless updates.
+Download the latest version for your operating system from the [GitHub Releases](https://github.com/GyeongHoKim/crosseverything/releases) page.
 
-### 🍎 macOS (Homebrew)
+### 🍎 macOS
 
-The recommended way to install on macOS is via [Homebrew Cask](https://brew.sh/):
-
-```bash
-brew install --cask crosseverything
-```
+1. Download the `.dmg` file from the latest release.
+2. Open the downloaded file and drag CrossEverything to your Applications folder.
+3. Launch the app from Applications.
 
 > **Note:** On first launch, you must grant **Full Disk Access** in `System Settings > Privacy & Security` to allow file indexing.
 
-### 🐧 Linux (Snap)
+### 🐧 Linux
 
-For Linux users, install via the [Snap Store](https://snapcraft.io/):
-
-```bash
-sudo snap install crosseverything
-```
+1. Download the appropriate package for your distribution:
+   - **Debian/Ubuntu:** `.deb` package
+   - **Other distributions:** `.AppImage` (universal)
+2. Install or run the downloaded file.
+3. Launch CrossEverything from your application menu.
 
 ---
 
@@ -71,7 +69,7 @@ A: No. Windows already has the original [Everything](https://www.voidtools.com/)
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/crosseverything.git
+git clone https://github.com/GyeongHoKim/crosseverything.git
 
 # Install dependencies
 npm install

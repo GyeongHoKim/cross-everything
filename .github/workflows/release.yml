@@ -1,0 +1,131 @@
+name: Release
+
+on:
+  push:
+    branches: ["main"]
+
+# Prevent concurrent runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for creating tags, pushing, and creating releases
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+          token: ${{ secrets.GITHUB_TOKEN }}  # Explicitly use GITHUB_TOKEN for tag push
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Get current version from package.json
+        id: current_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Get previous version from package.json
+        id: previous_version
+        run: |
+          # Get the previous commit's package.json version
+          if git show HEAD~1:package.json > /tmp/prev_package.json 2>/dev/null; then
+            PREV_VERSION=$(node -p "require('/tmp/prev_package.json').version")
+            echo "version=$PREV_VERSION" >> $GITHUB_OUTPUT
+            echo "Previous version: $PREV_VERSION"
+          else
+            # No previous commit or package.json doesn't exist
+            echo "version=" >> $GITHUB_OUTPUT
+            echo "No previous version found (first commit or package.json didn't exist)"
+          fi
+
+      - name: Check if version changed
+        id: version_changed
+        run: |
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          PREVIOUS="${{ steps.previous_version.outputs.version }}"
+          
+          if [ -z "$PREVIOUS" ]; then
+            # First commit or no previous version - treat as changed
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "No previous version, will create release"
+          elif [ "$CURRENT" != "$PREVIOUS" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Version changed from $PREVIOUS to $CURRENT, will create release"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "Version unchanged ($CURRENT), skipping release"
+          fi
+
+      - name: Check if tag already exists
+        id: check_tag
+        if: steps.version_changed.outputs.changed == 'true'
+        run: |
+          TAG="v${{ steps.current_version.outputs.version }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag $TAG already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Tag $TAG does not exist, will create"
+          fi
+
+      - name: Create and push tag
+        if: steps.version_changed.outputs.changed == 'true' && steps.check_tag.outputs.exists == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.current_version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          # Use GITHUB_TOKEN for authentication
+          git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git "$TAG"
+
+      - name: Generate changelog
+        id: changelog
+        if: steps.version_changed.outputs.changed == 'true' && steps.check_tag.outputs.exists == 'false'
+        run: |
+          TAG="v${{ steps.current_version.outputs.version }}"
+          # Get the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            # No previous tag, get all commits
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          else
+            # Get commits since previous tag
+            CHANGELOG=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+          
+          # Escape newlines for GitHub output
+          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        if: steps.version_changed.outputs.changed == 'true' && steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.current_version.outputs.version }}
+          name: Release v${{ steps.current_version.outputs.version }}
+          body: |
+            ## Changes in this release
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ---
+            *Automatically generated by GitHub Actions*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
