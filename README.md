@@ -23,7 +23,8 @@ Download the latest version for your operating system from the [GitHub Releases]
 
 1. Download the `.dmg` file from the latest release.
 2. Open the downloaded file and drag CrossEverything to your Applications folder.
-3. Launch the app from Applications.
+3. Open the terminal and run `xattr -cr /Applications/cross-everything.app`
+4. Launch the app from Applications.
 
 > **Note:** On first launch, you must grant **Full Disk Access** in `System Settings > Privacy & Security` to allow file indexing.
 
