@@ -10,17 +10,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: Create Release
+  check-version:
+    name: Check Version
     runs-on: ubuntu-latest
-    permissions:
-      contents: write  # Required for creating tags, pushing, and creating releases
+    outputs:
+      version: ${{ steps.current_version.outputs.version }}
+      changed: ${{ steps.version_changed.outputs.changed }}
+      tag_exists: ${{ steps.check_tag.outputs.exists }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Fetch all history for tags
-          token: ${{ secrets.GITHUB_TOKEN }}  # Explicitly use GITHUB_TOKEN for tag push
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -79,23 +80,146 @@ jobs:
             echo "Tag $TAG does not exist, will create"
           fi
 
+  build:
+    name: Build Tauri App
+    needs: check-version
+    if: needs.check-version.outputs.changed == 'true' && needs.check-version.outputs.tag_exists == 'false'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest"
+            args: ""
+          - platform: "ubuntu-latest"
+            args: ""
+          - platform: "windows-latest"
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        run: npm run tauri build
+        # Note: Code signing secrets are optional
+        # If you want to sign your app, add these secrets in GitHub Settings > Secrets and variables > Actions:
+        # - TAURI_SIGNING_PRIVATE_KEY: Your private key for code signing
+        # - TAURI_SIGNING_PRIVATE_KEY_PASSWORD: Password for the private key (if encrypted)
+        # Uncomment the env section below if you have signing configured:
+        # env:
+        #   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Get app version
+        id: app_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Upload macOS artifacts
+        if: matrix.platform == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-bundle
+          path: |
+            src-tauri/target/release/bundle/dmg/*.dmg
+            src-tauri/target/release/bundle/macos/**/*.app
+          retention-days: 30
+
+      - name: Upload Linux artifacts
+        if: matrix.platform == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-bundle
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/appimage/*.AppImage
+          retention-days: 30
+
+      - name: Upload Windows artifacts
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-bundle
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
+          retention-days: 30
+
+  release:
+    name: Create Release
+    needs: [check-version, build]
+    if: needs.check-version.outputs.changed == 'true' && needs.check-version.outputs.tag_exists == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Create and push tag
-        if: steps.version_changed.outputs.changed == 'true' && steps.check_tag.outputs.exists == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v${{ steps.current_version.outputs.version }}"
+          TAG="v${{ steps.version.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "$TAG" -m "Release $TAG"
-          # Use GITHUB_TOKEN for authentication
           git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git "$TAG"
 
       - name: Generate changelog
         id: changelog
-        if: steps.version_changed.outputs.changed == 'true' && steps.check_tag.outputs.exists == 'false'
         run: |
-          TAG="v${{ steps.current_version.outputs.version }}"
+          TAG="v${{ steps.version.outputs.version }}"
           # Get the previous tag
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
           
@@ -113,12 +237,16 @@ jobs:
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
       - name: Create Release
-        if: steps.version_changed.outputs.changed == 'true' && steps.check_tag.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.current_version.outputs.version }}
-          name: Release v${{ steps.current_version.outputs.version }}
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Release v${{ steps.version.outputs.version }}
           body: |
             ## Changes in this release
             
@@ -126,6 +254,8 @@ jobs:
             
             ---
             *Automatically generated by GitHub Actions*
+          files: |
+            artifacts/**/*
           draft: false
           prerelease: false
           generate_release_notes: true

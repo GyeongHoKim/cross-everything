@@ -17,7 +17,7 @@ While Windows users have the original tool, **CrossEverything** brings that same
 
 ## Installation
 
-Download the latest version for your operating system from the [GitHub Releases](https://github.com/GyeongHoKim/crosseverything/releases) page.
+Download the latest version for your operating system from the [GitHub Releases](https://github.com/GyeongHoKim/cross-everything/releases) page.
 
 ### 🍎 macOS
 
