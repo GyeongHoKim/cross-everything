@@ -148,6 +148,7 @@ jobs:
 
       - name: Get app version
         id: app_version
+        shell: bash
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
