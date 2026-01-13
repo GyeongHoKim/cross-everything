@@ -1,13 +1,15 @@
 // File watching with notify
 
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::Path;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 
 #[allow(dead_code)] // Reserved for future file watcher integration
 pub struct FileWatcher {
     watcher: RecommendedWatcher,
     event_receiver: mpsc::Receiver<notify::Result<Event>>,
+    watched_paths: HashSet<PathBuf>,
 }
 
 impl FileWatcher {
@@ -19,6 +21,7 @@ impl FileWatcher {
         Ok(FileWatcher {
             watcher,
             event_receiver: rx,
+            watched_paths: HashSet::new(),
         })
     }
 
@@ -30,12 +33,17 @@ impl FileWatcher {
             RecursiveMode::NonRecursive
         };
         self.watcher.watch(path, mode)?;
+        self.watched_paths.insert(path.to_path_buf());
         Ok(())
     }
 
     #[allow(dead_code)] // Reserved for future file watcher integration
     pub fn unwatch_path(&mut self, path: &Path) -> Result<(), notify::Error> {
+        if !self.watched_paths.contains(path) {
+            return Err(notify::Error::generic("Path is not being watched"));
+        }
         self.watcher.unwatch(path)?;
+        self.watched_paths.remove(path);
         Ok(())
     }
 
