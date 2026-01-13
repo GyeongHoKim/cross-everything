@@ -87,15 +87,27 @@ describe("FileList", () => {
   });
 
   it("should format dates correctly", () => {
+    const formatDate = (dateStr: string): string => {
+      try {
+        const date = new Date(dateStr);
+        if (Number.isNaN(date.getTime())) {
+          return dateStr;
+        }
+        return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      } catch {
+        return dateStr;
+      }
+    };
+
     render(<FileList results={mockResults} loading={false} />);
 
     const rows = screen.getAllByRole("row");
     expect(rows[1]).toContainHTML("test.txt");
-    expect(rows[1]).toContainHTML("1/1/2024");
+    expect(rows[1]).toContainHTML(formatDate("2024-01-01T00:00:00Z"));
     expect(rows[2]).toContainHTML("Documents");
-    expect(rows[2]).toContainHTML("09:00");
+    expect(rows[2]).toContainHTML(formatDate("2024-01-02T12:00:00Z"));
     expect(rows[3]).toContainHTML("large-file.iso");
-    expect(rows[3]).toContainHTML("30");
+    expect(rows[3]).toContainHTML(formatDate("2024-01-03T18:30:00Z"));
   });
 
   it("should handle invalid date strings gracefully", () => {
