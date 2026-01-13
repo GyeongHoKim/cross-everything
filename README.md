@@ -6,8 +6,6 @@
 
 While Windows users have the original tool, **CrossEverything** brings that same instant indexing and zero-latency search performance to the rest of the ecosystem.
 
-![Screenshot](https://via.placeholder.com/800x400?text=CrossEverything+Screenshot)
-
 ## Key Features
 
 - **⚡️ Instant Search:** Real-time results as you type, indexed in seconds.
@@ -22,6 +20,7 @@ While Windows users have the original tool, **CrossEverything** brings that same
 CrossEverything is distributed through native package managers for seamless updates.
 
 ### 🍎 macOS (Homebrew)
+
 The recommended way to install on macOS is via [Homebrew Cask](https://brew.sh/):
 
 ```bash
@@ -31,6 +30,7 @@ brew install --cask crosseverything
 > **Note:** On first launch, you must grant **Full Disk Access** in `System Settings > Privacy & Security` to allow file indexing.
 
 ### 🐧 Linux (Snap)
+
 For Linux users, install via the [Snap Store](https://snapcraft.io/):
 
 ```bash
@@ -47,6 +47,7 @@ sudo snap install crosseverything
 4. Start typing to find any file, instantly.
 
 ### Search Syntax
+
 - `ext:jpg` - Search for JPG files.
 - `folder:Downloads` - Search within the Downloads folder.
 - `regex:^IMG_\d+` - Use regular expressions.
@@ -63,9 +64,8 @@ A: No. Windows already has the original [Everything](https://www.voidtools.com/)
 ## Development
 
 ### Prerequisites
-- Node.js >= 18
-- Rust (Cargo)
-- npm / Yarn
+
+[Prerequisites](https://tauri.app/start/prerequisites/#linux)
 
 ### Build from source
 
