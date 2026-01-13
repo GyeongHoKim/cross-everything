@@ -109,7 +109,9 @@ describe("useAutostart", () => {
       expect(result.current.isAutostartEnabled).toBe(false);
     });
 
-    await expect(result.current.enableAutostart()).rejects.toThrow("Failed to enable");
+    await act(async () => {
+      await expect(result.current.enableAutostart()).rejects.toThrow("Failed to enable");
+    });
     expect(result.current.loading).toBe(false);
   });
 
@@ -123,7 +125,9 @@ describe("useAutostart", () => {
       expect(result.current.isAutostartEnabled).toBe(true);
     });
 
-    await expect(result.current.disableAutostart()).rejects.toThrow("Failed to disable");
+    await act(async () => {
+      await expect(result.current.disableAutostart()).rejects.toThrow("Failed to disable");
+    });
     expect(result.current.loading).toBe(false);
   });
 
@@ -137,7 +141,9 @@ describe("useAutostart", () => {
       expect(result.current.isAutostartEnabled).toBe(false);
     });
 
-    await expect(result.current.toggleAutostart()).rejects.toThrow("Failed to enable");
+    await act(async () => {
+      await expect(result.current.toggleAutostart()).rejects.toThrow("Failed to enable");
+    });
   });
 
   it("should handle isEnabled check error gracefully", async () => {
