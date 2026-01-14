@@ -21,9 +21,19 @@ export default function FileList({ results, loading = false }: FileListProps) {
   }, [error]);
 
   const handleDoubleClick = async (file: FileResult) => {
+    console.log("[FileList] Double-click detected:", {
+      name: file.name,
+      path: file.path,
+      is_folder: file.is_folder,
+    });
     try {
       await openFileOrDirectory(file.path);
+      console.log("[FileList] Successfully opened:", file.path);
     } catch (err) {
+      console.error("[FileList] Failed to open file/directory:", {
+        path: file.path,
+        error: err,
+      });
       // Error is already set in hook, just ensure dialog is shown
       const explorerError = err as ExplorerError;
       setDisplayError(explorerError);
@@ -32,9 +42,21 @@ export default function FileList({ results, loading = false }: FileListProps) {
 
   const handleRightClick = async (file: FileResult, event: React.MouseEvent) => {
     event.preventDefault();
+    console.log("[FileList] Right-click detected:", {
+      name: file.name,
+      path: file.path,
+      is_folder: file.is_folder,
+      coordinates: { x: event.clientX, y: event.clientY },
+    });
     try {
       await showContextMenu(file.path, event.clientX, event.clientY);
+      console.log("[FileList] Successfully showed context menu:", file.path);
     } catch (err) {
+      console.error("[FileList] Failed to show context menu:", {
+        path: file.path,
+        coordinates: { x: event.clientX, y: event.clientY },
+        error: err,
+      });
       // Error is already set in hook, just ensure dialog is shown
       const explorerError = err as ExplorerError;
       setDisplayError(explorerError);
