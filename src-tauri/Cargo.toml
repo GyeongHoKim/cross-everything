@@ -1,8 +1,8 @@
 [package]
 name = "cross-everything"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "0.2.2"
+description = "A equivalent desktop app of everything"
+authors = ["GyeongHo Kim"]
 edition = "2021"
 rust-version = "1.70"
 

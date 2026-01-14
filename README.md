@@ -70,7 +70,7 @@ A: No. Windows already has the original [Everything](https://www.voidtools.com/)
 
 ```bash
 # Clone the repository
-git clone https://github.com/GyeongHoKim/crosseverything.git
+git clone https://github.com/GyeongHoKim/cross-everything.git
 
 # Install dependencies
 npm install

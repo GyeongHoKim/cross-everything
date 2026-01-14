@@ -1,5 +1,6 @@
 {
   "name": "cross-everything",
+  "author": "GyeongHoKim <gyeongho.dev@proton.me>",
   "private": true,
   "version": "0.2.2",
   "type": "module",
