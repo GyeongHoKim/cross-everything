@@ -1,3 +1,4 @@
+import { useFileExplorer } from "../hooks/useFileExplorer";
 import type { FileResult } from "../types/search";
 
 interface FileListProps {
@@ -6,6 +7,16 @@ interface FileListProps {
 }
 
 export default function FileList({ results, loading = false }: FileListProps) {
+  const { openFileOrDirectory } = useFileExplorer();
+
+  const handleDoubleClick = async (file: FileResult) => {
+    try {
+      await openFileOrDirectory(file.path);
+    } catch (error) {
+      // Error handling will be added in T019
+      console.error("Failed to open file/directory:", error);
+    }
+  };
   if (loading) {
     return <div className="file-list-loading">Loading...</div>;
   }
@@ -63,6 +74,7 @@ export default function FileList({ results, loading = false }: FileListProps) {
               key={`${file.path}-${index}`}
               className={index % 2 === 0 ? "row-even" : "row-odd"}
               tabIndex={0}
+              onDoubleClick={() => handleDoubleClick(file)}
               aria-label={`${file.is_folder ? "Folder" : "File"}: ${file.name}, Path: ${file.path}, Size: ${formatSize(file.size)}, Modified: ${formatDate(file.modified)}`}
             >
               <td className="col-name">

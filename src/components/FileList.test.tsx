@@ -1,7 +1,10 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useFileExplorer } from "../hooks/useFileExplorer";
 import type { FileResult } from "../types/search";
 import FileList from "./FileList";
+
+vi.mock("../hooks/useFileExplorer");
 
 describe("FileList", () => {
   const mockResults: FileResult[] = [
@@ -206,5 +209,41 @@ describe("FileList", () => {
     const { container } = render(<FileList results={[]} loading={false} />);
 
     expect(container.firstChild).toBeNull();
+  });
+
+  describe("double-click handler", () => {
+    const mockOpenFileOrDirectory = vi.fn().mockResolvedValue(undefined);
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      (useFileExplorer as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+        openFileOrDirectory: mockOpenFileOrDirectory,
+        showContextMenu: vi.fn(),
+        error: null,
+        loading: false,
+      });
+    });
+
+    it("should call openFileOrDirectory when a file row is double-clicked", async () => {
+      render(<FileList results={mockResults} loading={false} />);
+
+      const rows = screen.getAllByRole("row");
+      const fileRow = rows[1]; // First data row (test.txt)
+
+      fireEvent.doubleClick(fileRow);
+
+      expect(mockOpenFileOrDirectory).toHaveBeenCalledWith("/home/user/test.txt");
+    });
+
+    it("should call openFileOrDirectory when a directory row is double-clicked", async () => {
+      render(<FileList results={mockResults} loading={false} />);
+
+      const rows = screen.getAllByRole("row");
+      const folderRow = rows[2]; // Second data row (Documents)
+
+      fireEvent.doubleClick(folderRow);
+
+      expect(mockOpenFileOrDirectory).toHaveBeenCalledWith("/home/user/Documents");
+    });
   });
 });

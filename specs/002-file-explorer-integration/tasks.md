@@ -25,10 +25,10 @@
 
 **Purpose**: Project initialization, dependencies, and permissions configuration
 
-- [ ] T001 Add platform-specific dependencies to `src-tauri/Cargo.toml` (winapi for Windows, objc/cocoa for macOS, zbus for Linux)
-- [ ] T002 [P] Update Tauri capabilities in `src-tauri/capabilities/default.json` to include `opener:allow-open-path` permission
-- [ ] T003 [P] Create `src/types/explorer.ts` with `ExplorerError` TypeScript interface definition
-- [ ] T004 Create `src-tauri/src/explorer.rs` module file with `ExplorerError` Rust enum definition
+- [x] T001 Add platform-specific dependencies to `src-tauri/Cargo.toml` (winapi for Windows, objc/cocoa for macOS, zbus for Linux)
+- [x] T002 [P] Update Tauri capabilities in `src-tauri/capabilities/default.json` to include `opener:allow-open-path` permission
+- [x] T003 [P] Create `src/types/explorer.ts` with `ExplorerError` TypeScript interface definition
+- [x] T004 Create `src-tauri/src/explorer.rs` module file with `ExplorerError` Rust enum definition
 
 **Checkpoint**: Dependencies installed, permissions configured, error types defined
 
@@ -40,10 +40,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 [P] Implement `ExplorerError` enum in `src-tauri/src/explorer.rs` with variants: NotFound, PermissionDenied, NoDefaultApp, OsError
-- [ ] T006 [P] Implement `ExplorerError` TypeScript interface in `src/types/explorer.ts` matching Rust enum structure
-- [ ] T007 Create `src/hooks/useFileExplorer.ts` hook file with basic structure and error/loading state management
-- [ ] T008 Register `explorer` module in `src-tauri/src/lib.rs` using `mod explorer;`
+- [x] T005 [P] Implement `ExplorerError` enum in `src-tauri/src/explorer.rs` with variants: NotFound, PermissionDenied, NoDefaultApp, OsError
+- [x] T006 [P] Implement `ExplorerError` TypeScript interface in `src/types/explorer.ts` matching Rust enum structure
+- [x] T007 Create `src/hooks/useFileExplorer.ts` hook file with basic structure and error/loading state management
+- [x] T008 Register `explorer` module in `src-tauri/src/lib.rs` using `mod explorer;`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -59,20 +59,20 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T009 [P] [US1] Write backend test for `open_file_or_directory` with valid file in `src-tauri/tests/explorer_test.rs`
-- [ ] T010 [P] [US1] Write backend test for `open_file_or_directory` with valid directory in `src-tauri/tests/explorer_test.rs`
-- [ ] T011 [P] [US1] Write backend test for `open_file_or_directory` with non-existent path in `src-tauri/tests/explorer_test.rs`
-- [ ] T012 [P] [US1] Write frontend test for double-click handler in `src/components/FileList.test.tsx`
-- [ ] T013 [P] [US1] Write frontend test for `useFileExplorer` hook `openFileOrDirectory` function in `src/hooks/useFileExplorer.test.ts` (create new file)
+- [x] T009 [P] [US1] Write backend test for `open_file_or_directory` with valid file in `src-tauri/tests/explorer_test.rs`
+- [x] T010 [P] [US1] Write backend test for `open_file_or_directory` with valid directory in `src-tauri/tests/explorer_test.rs`
+- [x] T011 [P] [US1] Write backend test for `open_file_or_directory` with non-existent path in `src-tauri/tests/explorer_test.rs`
+- [x] T012 [P] [US1] Write frontend test for double-click handler in `src/components/FileList.test.tsx`
+- [x] T013 [P] [US1] Write frontend test for `useFileExplorer` hook `openFileOrDirectory` function in `src/hooks/useFileExplorer.test.ts` (create new file)
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Implement `open_file_or_directory` Tauri command in `src-tauri/src/explorer.rs` using `tauri-plugin-opener`
-- [ ] T015 [US1] Register `open_file_or_directory` command in `src-tauri/src/lib.rs` invoke handler
-- [ ] T016 [US1] Implement `openFileOrDirectory` function in `src/hooks/useFileExplorer.ts` hook
-- [ ] T017 [US1] Add double-click event handler `onDoubleClick` to table rows in `src/components/FileList.tsx`
-- [ ] T018 [US1] Connect double-click handler to `useFileExplorer` hook in `src/components/FileList.tsx`
-- [ ] T019 [US1] Add error handling for double-click operations in `src/components/FileList.tsx` (per FR-007, FR-008)
+- [x] T014 [US1] Implement `open_file_or_directory` Tauri command in `src-tauri/src/explorer.rs` using `tauri-plugin-opener`
+- [x] T015 [US1] Register `open_file_or_directory` command in `src-tauri/src/lib.rs` invoke handler
+- [x] T016 [US1] Implement `openFileOrDirectory` function in `src/hooks/useFileExplorer.ts` hook
+- [x] T017 [US1] Add double-click event handler `onDoubleClick` to table rows in `src/components/FileList.tsx`
+- [x] T018 [US1] Connect double-click handler to `useFileExplorer` hook in `src/components/FileList.tsx`
+- [x] T019 [US1] Add error handling for double-click operations in `src/components/FileList.tsx` (per FR-007, FR-008)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently. Users can double-click files/directories to open them.
 

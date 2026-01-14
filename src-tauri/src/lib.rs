@@ -1,5 +1,6 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
+mod explorer;
 mod index;
 mod search;
 mod watcher;
@@ -631,7 +632,8 @@ pub fn run() {
             greet,
             build_index,
             search_files,
-            get_index_status
+            get_index_status,
+            explorer::open_file_or_directory
         ])
         .on_window_event(|app, event| {
             // When window is closed, hide it instead of destroying it
