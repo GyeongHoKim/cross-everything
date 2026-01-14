@@ -4,6 +4,43 @@ import type { ExplorerError } from "../types/explorer";
 import type { FileResult } from "../types/search";
 import ErrorDialog from "./ErrorDialog";
 
+// Normalize error from Tauri to ExplorerError format (same as in useFileExplorer)
+function normalizeExplorerError(err: unknown): ExplorerError {
+  // If already in correct format
+  if (
+    err &&
+    typeof err === "object" &&
+    "kind" in err &&
+    "message" in err &&
+    typeof (err as ExplorerError).kind === "string" &&
+    typeof (err as ExplorerError).message === "string"
+  ) {
+    return err as ExplorerError;
+  }
+
+  // Handle Rust enum serialization format: {"OsError": "message"}
+  if (err && typeof err === "object") {
+    const errObj = err as Record<string, unknown>;
+    if ("OsError" in errObj && typeof errObj.OsError === "string") {
+      return { kind: "OsError", message: errObj.OsError };
+    }
+    if ("NotFound" in errObj && typeof errObj.NotFound === "string") {
+      return { kind: "NotFound", message: errObj.NotFound };
+    }
+    if ("PermissionDenied" in errObj && typeof errObj.PermissionDenied === "string") {
+      return { kind: "PermissionDenied", message: errObj.PermissionDenied };
+    }
+    if ("NoDefaultApp" in errObj && typeof errObj.NoDefaultApp === "string") {
+      return { kind: "NoDefaultApp", message: errObj.NoDefaultApp };
+    }
+  }
+
+  // Fallback: convert to string
+  const errorMessage =
+    err instanceof Error ? err.message : typeof err === "string" ? err : String(err);
+  return { kind: "OsError", message: errorMessage || "Unknown error" };
+}
+
 interface FileListProps {
   results: FileResult[];
   loading?: boolean;
@@ -33,9 +70,11 @@ export default function FileList({ results, loading = false }: FileListProps) {
       console.error("[FileList] Failed to open file/directory:", {
         path: file.path,
         error: err,
+        errorType: typeof err,
+        errorKeys: err && typeof err === "object" ? Object.keys(err) : "N/A",
       });
-      // Error is already set in hook, just ensure dialog is shown
-      const explorerError = err as ExplorerError;
+      // Normalize error format and ensure dialog is shown
+      const explorerError = normalizeExplorerError(err);
       setDisplayError(explorerError);
     }
   };
@@ -56,9 +95,11 @@ export default function FileList({ results, loading = false }: FileListProps) {
         path: file.path,
         coordinates: { x: event.clientX, y: event.clientY },
         error: err,
+        errorType: typeof err,
+        errorKeys: err && typeof err === "object" ? Object.keys(err) : "N/A",
       });
-      // Error is already set in hook, just ensure dialog is shown
-      const explorerError = err as ExplorerError;
+      // Normalize error format and ensure dialog is shown
+      const explorerError = normalizeExplorerError(err);
       setDisplayError(explorerError);
     }
   };

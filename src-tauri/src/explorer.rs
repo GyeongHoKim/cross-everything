@@ -6,6 +6,7 @@ use std::path::Path;
 use tauri_plugin_opener::OpenerExt;
 
 #[derive(Debug, Serialize)]
+#[serde(tag = "kind", content = "message")]
 #[allow(dead_code)] // Variants will be used in future platform implementations
 pub enum ExplorerError {
     NotFound(String),
@@ -194,28 +195,196 @@ fn show_context_menu_windows(
     x: Option<f64>,
     y: Option<f64>,
 ) -> Result<(), ExplorerError> {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    use windows::{
+        core::{Interface, PCWSTR, PCSTR},
+        Win32::{
+            Foundation::{POINT, HANDLE, BOOL},
+            System::Com::{CoInitializeEx, CoUninitialize, COINIT_APARTMENTTHREADED},
+            UI::Shell::{
+                IContextMenu, IShellItem, SHCreateItemFromParsingName, CMF_NORMAL,
+                CMINVOKECOMMANDINFO,
+            },
+            UI::WindowsAndMessaging::{
+                TrackPopupMenu, GetCursorPos, GetForegroundWindow, CreatePopupMenu, DestroyMenu,
+                TPM_LEFTALIGN, TPM_RETURNCMD, TPM_RIGHTBUTTON,
+            },
+        },
+    };
+
     log::debug!(
         "[explorer::windows] show_context_menu_windows called: path={}, x={:?}, y={:?}",
         path,
         x,
         y
     );
-    // Windows implementation using winapi crate
-    // This is a placeholder - full implementation requires:
-    // 1. COM initialization
-    // 2. IShellFolder interface
-    // 3. IContextMenu interface
-    // 4. TrackPopupMenu to display menu
-    //
-    // For now, return an error indicating it's not yet implemented
-    // This allows the structure to be in place for future enhancement
-    log::warn!(
-        "[explorer::windows] Context menu implementation not yet complete for: {}",
-        path
-    );
-    Err(ExplorerError::OsError(
-        "Windows context menu implementation not yet complete. This feature requires complex Windows API integration.".to_string(),
-    ))
+
+    // Convert path to wide string
+    let path_wide: Vec<u16> = OsStr::new(path)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    // Initialize COM
+    unsafe {
+        let com_result = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+        if com_result.is_err() {
+            log::warn!(
+                "[explorer::windows] COM already initialized or failed: {:?}",
+                com_result
+            );
+        }
+    }
+
+    let result = unsafe {
+        // Create IShellItem from file path
+        let shell_item: IShellItem = SHCreateItemFromParsingName(
+            PCWSTR(path_wide.as_ptr()),
+            None,
+        )
+        .map_err(|e| {
+            log::error!(
+                "[explorer::windows] Failed to create shell item from path '{}': {:?}",
+                path,
+                e
+            );
+            ExplorerError::OsError(format!("Failed to parse path: {:?}", e))
+        })?;
+
+        // Query for IContextMenu interface
+        let context_menu: IContextMenu = shell_item
+            .cast()
+            .map_err(|e| {
+                log::error!(
+                    "[explorer::windows] Failed to get IContextMenu for '{}': {:?}",
+                    path,
+                    e
+                );
+                ExplorerError::OsError(format!("Failed to get context menu: {:?}", e))
+            })?;
+
+        // Get foreground window handle
+        let hwnd = GetForegroundWindow();
+        if hwnd.is_invalid() {
+            log::warn!("[explorer::windows] Failed to get foreground window");
+        }
+
+        // Get cursor position or use provided coordinates
+        let mut point = POINT { x: 0, y: 0 };
+        if let (Some(x_coord), Some(y_coord)) = (x, y) {
+            point.x = x_coord as i32;
+            point.y = y_coord as i32;
+            log::debug!(
+                "[explorer::windows] Using provided coordinates: ({}, {})",
+                point.x,
+                point.y
+            );
+        } else {
+            // Get current cursor position
+            if GetCursorPos(&mut point).is_err() {
+                log::warn!(
+                    "[explorer::windows] Failed to get cursor position, using (0, 0)"
+                );
+                point.x = 0;
+                point.y = 0;
+            } else {
+                log::debug!(
+                    "[explorer::windows] Using cursor position: ({}, {})",
+                    point.x,
+                    point.y
+                );
+            }
+        }
+
+        // Create a popup menu
+        let hmenu = CreatePopupMenu().map_err(|e| {
+            log::error!("[explorer::windows] Failed to create popup menu: {:?}", e);
+            ExplorerError::OsError(format!("Failed to create popup menu: {:?}", e))
+        })?;
+
+        // Query the context menu to add items
+        let id_cmd_first = 1;
+        let id_cmd_last = 0x7FFF;
+        context_menu
+            .QueryContextMenu(hmenu, 0, id_cmd_first, id_cmd_last, CMF_NORMAL)
+            .map_err(|e| {
+                log::error!(
+                    "[explorer::windows] QueryContextMenu failed: {:?}",
+                    e
+                );
+                let _ = DestroyMenu(hmenu);
+                ExplorerError::OsError(format!("Failed to query context menu: {:?}", e))
+            })?;
+
+        log::info!("[explorer::windows] Context menu populated successfully");
+
+        // Display the menu
+        let command = TrackPopupMenu(
+            hmenu,
+            TPM_LEFTALIGN | TPM_RETURNCMD | TPM_RIGHTBUTTON,
+            point.x,
+            point.y,
+            0,
+            hwnd,
+            None,
+        );
+
+        // Clean up menu
+        let _ = DestroyMenu(hmenu);
+
+        if command == BOOL(0) {
+            log::info!("[explorer::windows] User cancelled context menu");
+            Ok(())
+        } else {
+            let command_id = command.0 as u32;
+            log::info!(
+                "[explorer::windows] User selected menu item: {}",
+                command_id
+            );
+
+            // Convert command ID to verb (MAKEINTRESOURCE)
+            // The command ID is the offset from id_cmd_first
+            let verb_offset = (command_id - id_cmd_first) as *const u8;
+            let lp_verb = PCSTR::from_raw(verb_offset);
+
+            // Invoke the selected command
+            let cmici = CMINVOKECOMMANDINFO {
+                cbSize: std::mem::size_of::<CMINVOKECOMMANDINFO>() as u32,
+                fMask: 0,
+                hwnd,
+                lpVerb: lp_verb,
+                lpParameters: PCSTR::null(),
+                lpDirectory: PCSTR::null(),
+                nShow: 1i32, // SW_SHOWNORMAL
+                dwHotKey: 0,
+                hIcon: HANDLE::default(),
+            };
+
+            let invoke_result = context_menu.InvokeCommand(&cmici);
+
+            if invoke_result.is_err() {
+                log::error!(
+                    "[explorer::windows] InvokeCommand failed: {:?}",
+                    invoke_result
+                );
+                return Err(ExplorerError::OsError(format!(
+                    "Failed to invoke command: {:?}",
+                    invoke_result
+                )));
+            }
+
+            log::info!("[explorer::windows] Context menu command invoked successfully");
+            Ok(())
+        }
+    };
+
+    // Uninitialize COM
+    unsafe {
+        CoUninitialize();
+    }
+
+    result
 }
 
 #[cfg(target_os = "macos")]

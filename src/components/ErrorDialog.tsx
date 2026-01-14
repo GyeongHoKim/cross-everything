@@ -23,17 +23,43 @@ export default function ErrorDialog({ error, onClose }: ErrorDialogProps) {
   }
 
   const getErrorMessage = (err: ExplorerError): string => {
+    // Handle case where error might be in different format
+    if (!err || typeof err !== "object") {
+      return "An unknown error occurred";
+    }
+
+    // Check if error is in the expected format
+    if (!("kind" in err) || !("message" in err)) {
+      console.error("[ErrorDialog] Unexpected error format:", err);
+      // Try to extract message from different possible formats
+      const errAny = err as Record<string, unknown>;
+      if ("OsError" in errAny && typeof errAny.OsError === "string") {
+        return `System error: ${errAny.OsError}`;
+      }
+      if ("NotFound" in errAny && typeof errAny.NotFound === "string") {
+        return `File or directory not found: ${errAny.NotFound}`;
+      }
+      if ("PermissionDenied" in errAny && typeof errAny.PermissionDenied === "string") {
+        return `Permission denied: ${errAny.PermissionDenied}`;
+      }
+      if ("NoDefaultApp" in errAny && typeof errAny.NoDefaultApp === "string") {
+        return `No default application found: ${errAny.NoDefaultApp}`;
+      }
+      return `An error occurred: ${JSON.stringify(err)}`;
+    }
+
     switch (err.kind) {
       case "NotFound":
-        return `File or directory not found: ${err.path || "Unknown path"}`;
+        // Extract path from message if it contains path information
+        return `File or directory not found: ${err.message}`;
       case "PermissionDenied":
         return `Permission denied: ${err.message}`;
       case "NoDefaultApp":
-        return `No default application found for: ${err.path || "this file type"}`;
+        return `No default application found for: ${err.message}`;
       case "OsError":
         return `System error: ${err.message}`;
       default:
-        return `An error occurred: ${err.message}`;
+        return `An error occurred: ${err.message || JSON.stringify(err)}`;
     }
   };
 
