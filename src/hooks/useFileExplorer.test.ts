@@ -1,23 +1,28 @@
-import { invoke } from "@tauri-apps/api/core";
+import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ExplorerError } from "../types/explorer";
 import { useFileExplorer } from "./useFileExplorer";
 
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn(),
-}));
-
 describe("useFileExplorer", () => {
-  const mockInvoke = invoke as unknown as ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
-    vi.clearAllMocks();
+    clearMocks();
+  });
+
+  afterEach(() => {
+    clearMocks();
   });
 
   describe("openFileOrDirectory", () => {
     it("should call invoke with correct parameters", async () => {
-      mockInvoke.mockResolvedValue(undefined);
+      let calledWith: unknown = null;
+
+      mockIPC((cmd, args) => {
+        if (cmd === "open_file_or_directory") {
+          calledWith = args;
+          return undefined;
+        }
+      });
 
       const { result } = renderHook(() => useFileExplorer());
 
@@ -28,9 +33,7 @@ describe("useFileExplorer", () => {
         await result.current.openFileOrDirectory("/path/to/file");
       });
 
-      expect(mockInvoke).toHaveBeenCalledWith("open_file_or_directory", {
-        path: "/path/to/file",
-      });
+      expect(calledWith).toEqual({ path: "/path/to/file" });
     });
 
     it("should set loading state during operation", async () => {
@@ -38,7 +41,12 @@ describe("useFileExplorer", () => {
       const invokePromise = new Promise<void>((resolve) => {
         resolveInvoke = resolve;
       });
-      mockInvoke.mockReturnValue(invokePromise);
+
+      mockIPC((cmd) => {
+        if (cmd === "open_file_or_directory") {
+          return invokePromise;
+        }
+      });
 
       const { result } = renderHook(() => useFileExplorer());
 
@@ -63,7 +71,12 @@ describe("useFileExplorer", () => {
         message: "File not found",
         path: "/path/to/file",
       };
-      mockInvoke.mockRejectedValue(mockError);
+
+      mockIPC((cmd) => {
+        if (cmd === "open_file_or_directory") {
+          throw mockError;
+        }
+      });
 
       const { result } = renderHook(() => useFileExplorer());
 
@@ -84,7 +97,14 @@ describe("useFileExplorer", () => {
 
   describe("showContextMenu", () => {
     it("should call invoke with correct parameters", async () => {
-      mockInvoke.mockResolvedValue(undefined);
+      let calledWith: unknown = null;
+
+      mockIPC((cmd, args) => {
+        if (cmd === "show_context_menu") {
+          calledWith = args;
+          return undefined;
+        }
+      });
 
       const { result } = renderHook(() => useFileExplorer());
 
@@ -92,7 +112,7 @@ describe("useFileExplorer", () => {
         await result.current.showContextMenu("/path/to/file", 100, 200);
       });
 
-      expect(mockInvoke).toHaveBeenCalledWith("show_context_menu", {
+      expect(calledWith).toEqual({
         path: "/path/to/file",
         x: 100,
         y: 200,
@@ -100,7 +120,14 @@ describe("useFileExplorer", () => {
     });
 
     it("should call invoke without coordinates when not provided", async () => {
-      mockInvoke.mockResolvedValue(undefined);
+      let calledWith: unknown = null;
+
+      mockIPC((cmd, args) => {
+        if (cmd === "show_context_menu") {
+          calledWith = args;
+          return undefined;
+        }
+      });
 
       const { result } = renderHook(() => useFileExplorer());
 
@@ -108,7 +135,7 @@ describe("useFileExplorer", () => {
         await result.current.showContextMenu("/path/to/file");
       });
 
-      expect(mockInvoke).toHaveBeenCalledWith("show_context_menu", {
+      expect(calledWith).toEqual({
         path: "/path/to/file",
         x: undefined,
         y: undefined,
@@ -121,7 +148,12 @@ describe("useFileExplorer", () => {
         message: "Permission denied",
         path: "/path/to/file",
       };
-      mockInvoke.mockRejectedValue(mockError);
+
+      mockIPC((cmd) => {
+        if (cmd === "show_context_menu") {
+          throw mockError;
+        }
+      });
 
       const { result } = renderHook(() => useFileExplorer());
 

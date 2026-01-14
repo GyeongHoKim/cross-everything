@@ -1,18 +1,16 @@
-import { invoke } from "@tauri-apps/api/core";
+import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { FileResult, SearchFilesOutput } from "../types/search";
 import { useFileSearch } from "./useFileSearch";
 
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn(),
-}));
-
 describe("useFileSearch", () => {
-  const mockInvoke = invoke as unknown as ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
-    vi.clearAllMocks();
+    clearMocks();
+  });
+
+  afterEach(() => {
+    clearMocks();
   });
 
   it("should search successfully with results", async () => {
@@ -31,7 +29,14 @@ describe("useFileSearch", () => {
       search_time_ms: 10,
     };
 
-    mockInvoke.mockResolvedValue(mockResponse);
+    let calledWith: unknown = null;
+
+    mockIPC((cmd, args) => {
+      if (cmd === "search_files") {
+        calledWith = args;
+        return mockResponse;
+      }
+    });
 
     const { result } = renderHook(() => useFileSearch());
 
@@ -52,7 +57,7 @@ describe("useFileSearch", () => {
       { timeout: 1000 },
     );
 
-    expect(mockInvoke).toHaveBeenCalledWith("search_files", {
+    expect(calledWith).toEqual({
       query: "test",
       useRegex: false,
       limit: 1000,
@@ -60,7 +65,11 @@ describe("useFileSearch", () => {
   });
 
   it("should handle INVALID_REGEX error", async () => {
-    mockInvoke.mockRejectedValue("INVALID_REGEX");
+    mockIPC((cmd) => {
+      if (cmd === "search_files") {
+        throw "INVALID_REGEX";
+      }
+    });
 
     const { result } = renderHook(() => useFileSearch());
 
@@ -79,7 +88,11 @@ describe("useFileSearch", () => {
   });
 
   it("should handle INDEX_NOT_READY error", async () => {
-    mockInvoke.mockRejectedValue("INDEX_NOT_READY");
+    mockIPC((cmd) => {
+      if (cmd === "search_files") {
+        throw "INDEX_NOT_READY";
+      }
+    });
 
     const { result } = renderHook(() => useFileSearch());
 
@@ -100,7 +113,11 @@ describe("useFileSearch", () => {
   });
 
   it("should handle generic error from Error object", async () => {
-    mockInvoke.mockRejectedValue(new Error("Network error"));
+    mockIPC((cmd) => {
+      if (cmd === "search_files") {
+        throw new Error("Network error");
+      }
+    });
 
     const { result } = renderHook(() => useFileSearch());
 
@@ -119,7 +136,11 @@ describe("useFileSearch", () => {
   });
 
   it("should handle unknown error type", async () => {
-    mockInvoke.mockRejectedValue(500);
+    mockIPC((cmd) => {
+      if (cmd === "search_files") {
+        throw 500;
+      }
+    });
 
     const { result } = renderHook(() => useFileSearch());
 
@@ -138,9 +159,9 @@ describe("useFileSearch", () => {
   });
 
   it("should manage loading state transitions", async () => {
-    mockInvoke.mockImplementation(
-      () =>
-        new Promise((resolve) =>
+    mockIPC((cmd) => {
+      if (cmd === "search_files") {
+        return new Promise((resolve) =>
           setTimeout(
             () =>
               resolve({
@@ -150,8 +171,9 @@ describe("useFileSearch", () => {
               }),
             100,
           ),
-        ),
-    );
+        );
+      }
+    });
 
     const { result } = renderHook(() => useFileSearch());
 
@@ -175,7 +197,15 @@ describe("useFileSearch", () => {
       total_found: 0,
       search_time_ms: 10,
     };
-    mockInvoke.mockResolvedValue(mockResponse);
+
+    let calledWith: unknown = null;
+
+    mockIPC((cmd, args) => {
+      if (cmd === "search_files") {
+        calledWith = args;
+        return mockResponse;
+      }
+    });
 
     const { result } = renderHook(() => useFileSearch());
 
@@ -190,7 +220,7 @@ describe("useFileSearch", () => {
       { timeout: 1000 },
     );
 
-    expect(mockInvoke).toHaveBeenCalledWith("search_files", {
+    expect(calledWith).toEqual({
       query: "test",
       useRegex: false,
       limit: 500,
