@@ -49,7 +49,7 @@ describe("useFileExplorer", () => {
       expect(result.current.loading).toBe(true);
 
       act(() => {
-        resolveInvoke!();
+        resolveInvoke?.();
       });
 
       await waitFor(() => {

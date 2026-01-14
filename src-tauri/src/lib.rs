@@ -633,7 +633,8 @@ pub fn run() {
             build_index,
             search_files,
             get_index_status,
-            explorer::open_file_or_directory
+            explorer::open_file_or_directory,
+            explorer::show_context_menu
         ])
         .on_window_event(|app, event| {
             // When window is closed, hide it instead of destroying it

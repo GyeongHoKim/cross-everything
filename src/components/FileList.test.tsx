@@ -1,12 +1,24 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useFileExplorer } from "../hooks/useFileExplorer";
+import type { ExplorerError } from "../types/explorer";
 import type { FileResult } from "../types/search";
 import FileList from "./FileList";
 
 vi.mock("../hooks/useFileExplorer");
 
 describe("FileList", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default mock for useFileExplorer
+    (useFileExplorer as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      openFileOrDirectory: vi.fn(),
+      showContextMenu: vi.fn(),
+      error: null,
+      loading: false,
+    });
+  });
+
   const mockResults: FileResult[] = [
     {
       name: "test.txt",
@@ -244,6 +256,74 @@ describe("FileList", () => {
       fireEvent.doubleClick(folderRow);
 
       expect(mockOpenFileOrDirectory).toHaveBeenCalledWith("/home/user/Documents");
+    });
+  });
+
+  describe("right-click handler", () => {
+    const mockShowContextMenu = vi.fn().mockResolvedValue(undefined);
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      (useFileExplorer as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+        openFileOrDirectory: vi.fn(),
+        showContextMenu: mockShowContextMenu,
+        error: null,
+        loading: false,
+      });
+    });
+
+    it("should call showContextMenu when a file row is right-clicked", async () => {
+      render(<FileList results={mockResults} loading={false} />);
+
+      const rows = screen.getAllByRole("row");
+      const fileRow = rows[1]; // First data row (test.txt)
+
+      fireEvent.contextMenu(fileRow, {
+        clientX: 100,
+        clientY: 200,
+      });
+
+      expect(mockShowContextMenu).toHaveBeenCalledWith("/home/user/test.txt", 100, 200);
+    });
+
+    it("should call showContextMenu when a directory row is right-clicked", async () => {
+      render(<FileList results={mockResults} loading={false} />);
+
+      const rows = screen.getAllByRole("row");
+      const folderRow = rows[2]; // Second data row (Documents)
+
+      fireEvent.contextMenu(folderRow, {
+        clientX: 150,
+        clientY: 250,
+      });
+
+      expect(mockShowContextMenu).toHaveBeenCalledWith("/home/user/Documents", 150, 250);
+    });
+  });
+
+  describe("error dialog", () => {
+    const mockError: ExplorerError = {
+      kind: "NotFound",
+      message: "File not found",
+      path: "/path/to/file",
+    };
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      (useFileExplorer as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+        openFileOrDirectory: vi.fn().mockRejectedValue(mockError),
+        showContextMenu: vi.fn(),
+        error: mockError,
+        loading: false,
+      });
+    });
+
+    it("should display error dialog when error occurs", () => {
+      render(<FileList results={mockResults} loading={false} />);
+
+      // Error dialog should be rendered when error exists
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByText(/File or directory not found/)).toBeInTheDocument();
     });
   });
 });
